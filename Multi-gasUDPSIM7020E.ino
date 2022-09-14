@@ -44,7 +44,7 @@ const char* ssid = "greenio"; //replace "xxxxxx" with your WIFI's ssid
 const char* password = "green7650"; //replace "xxxxxx" with your WIFI's password
 
 //WiFi&OTA 参数
-String HOSTNAME = "DemoCPNMultiGas01";
+String HOSTNAME = "CPNMultiGas01";
 #define PASSWORD "green7650" //the password for OTA upgrade, can set it in any char you want
 
 /************************************************  注意编译时要设置此值 *********************************
@@ -64,7 +64,7 @@ IPAddress dns2(114, 114, 114, 114);
 ModbusMaster node;
 HardwareSerial modbus(2);
 AIS_SIM7020E_API nb;
-
+#define trigWDTPin    33
 
 StaticJsonDocument<400> doc;
 
@@ -102,10 +102,10 @@ String getMacAddress() {
   return String(baseMacChr);
 }
 
- 
 
 
- 
+
+
 
 void setupOTA()
 {
@@ -231,7 +231,7 @@ void setupWIFI()
 void _init() {
 
   Serial.begin(115200);
-
+  SerialBT.begin(HOSTNAME); //Bluetooth
   HOSTNAME.concat(getMacAddress());
   setupWIFI();
   setupOTA();
@@ -241,18 +241,27 @@ void _init() {
   delay(500);
   digitalWrite(25, LOW);
 
-  nb.begin(address, serverPort);
-  nb.debug = true;
-  Serial.println(F("-------------BEGIN-------------"));
-  Serial.print(F(">>DeviceIP: "));
-  Serial.println(nb.getDeviceIP());
-  Serial.print(F(">>Signal: "));
-  Serial.println(nb.getSignal());
+  boolean isConnected = nb.begin(address, serverPort);
+  if (isConnected) {
+    nb.debug = true;
+    Serial.println(F("-------------BEGIN-------------"));
+    Serial.print(F(">>DeviceIP: "));
+    Serial.println(nb.getDeviceIP());
+    Serial.print(F(">>Signal: "));
+    Serial.println(nb.getSignal());
 
+
+    nb.pingIP(address);
+  } else {
+
+    Serial.println("NB Fail");
+    SerialBT.println("NB Fail");
+  }
   deviceToken = nb.getICCID();
   Serial.print(F(">>ICCID: "));
   Serial.println(deviceToken);
-  nb.pingIP(address);
+  SerialBT.print(F(">>ICCID: "));
+  SerialBT.println(deviceToken);
   modbus.begin(4800, SERIAL_8N1, 16, 17);
 
 }
@@ -263,7 +272,6 @@ void setup() {
   _init();
 
 
-  SerialBT.begin(HOSTNAME); //Bluetooth
 
 
   Serial.println();
@@ -327,22 +335,27 @@ void loop() {
     SerialBT.println("Start concat payload");
     getPayload();
     nb.sendMsgSTR(address, serverPort, payload);
-    
+
     // Send data in HexString
     //    nb.sendMsgHEX(address,serverPort,payload);
     previousMillis = currentMillis;
   }
   nb.waitResponse(data_return, address);
-  if (data_return != "")
+  if (data_return != ""){
     Serial.println("# Receive : " + data_return);
+    SerialBT.println("# Receive : " + data_return);
+  }
 
 
   ArduinoOTA.handle();
 
   if (currentMillis % 60000 == 0)
   {
-    Serial.println("hello，OTA now");
-    SerialBT.println("hello，OTA now");
+    Serial.println("Attach WiFi for，OTA "); Serial.println(WiFi.RSSI() );
+    SerialBT.println("Attach WiFi for OTA"); SerialBT.println(WiFi.RSSI() );
+    setupWIFI();
+    HeartBeat();
+    setupOTA();
 
   }
 }
@@ -422,29 +435,16 @@ void readMeter()
 
 void HeartBeat() {
   //   Sink current to drain charge from watchdog circuit
-  //  pinMode(trigWDTPin, OUTPUT);
-  //  digitalWrite(trigWDTPin, LOW);
-  //
-  //  // Led monitor for Heartbeat
-  //  digitalWrite(ledHeartPIN, LOW);
-  //  delay(300);
-  //  digitalWrite(ledHeartPIN, HIGH);
-  //
-  //  // Return to high-Z
-  //  pinMode(trigWDTPin, INPUT);
+  pinMode(trigWDTPin, OUTPUT);
+  digitalWrite(trigWDTPin, LOW);
 
-  Serial.println("Heartbeat sent");
+  pinMode(trigWDTPin, INPUT);
+
+  Serial.println("Heartbeat");
+  SerialBT.println("Heartbeat");
 
 }
 
-void t3CallHeartbeat() {
-
-  HeartBeat();
-}
-//void t4Restart() {     // Update read all data
-//  Serial.println("Restart");
-//  ESP.restart();
-//}
 float HexTofloat(uint32_t x)
 {
   return (*(float*)&x);
