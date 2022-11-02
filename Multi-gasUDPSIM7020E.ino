@@ -79,7 +79,7 @@ struct Meter
   String LUX;
   String TVOC;
   String CO2;
-  String CHO;
+  String CH2O;
   String O3;
   String O;
   String H2S;
@@ -313,6 +313,8 @@ void getPayload() {
   payload.concat(meter.NO2);
   payload.concat(",\\\"so2\\\":");
   payload.concat(meter.SO2);
+  payload.concat(",\\\"CH2O\\\":");
+  payload.concat(meter.CH2O);
   payload.concat(",\\\"RSSI\\\":");
   payload.concat(nb.getSignal());
 
@@ -351,8 +353,8 @@ void loop() {
 
   if (currentMillis % 60000 == 0)
   {
-    Serial.println("Attach WiFi for，OTA "); Serial.println(WiFi.RSSI() );
-    SerialBT.println("Attach WiFi for OTA"); SerialBT.println(WiFi.RSSI() );
+    Serial.println("v2.0 Attach WiFi for，OTA "); Serial.println(WiFi.RSSI() );
+    SerialBT.println("v2.0 Attach WiFi for OTA"); SerialBT.println(WiFi.RSSI() );
     setupWIFI();
     HeartBeat();
     setupOTA();
@@ -365,8 +367,8 @@ int readModbus1Byte(char addr, uint16_t  REG)
 {
   static uint32_t i;
   int8_t j, result;
-  int16_t data[2];
-  int32_t value = 0;
+  uint16_t data[2];
+  uint32_t value = 0;
   float val = 0.0;
 
   // communicate with Modbus slave ID 1 over Serial (port 2)
@@ -412,6 +414,7 @@ void readMeter()
   meter.CO = readModbus1Byte(ID, SensorAddr[9]); // Scan registers
   meter.NO2 = readModbus1Byte(ID, SensorAddr[10]); // Scan registers
   meter.SO2 = readModbus1Byte(ID, SensorAddr[11]); // Scan registers
+  meter.CH2O = readModbus1Byte(ID, SensorAddr[12]); // Scan registers
 
 
   Serial.print("pm2.5: ");  Serial.println(meter.PM2_5);
@@ -426,6 +429,7 @@ void readMeter()
   Serial.print("CO: ");  Serial.println(meter.CO);
   Serial.print("NO2: ");  Serial.println(meter.NO2);
   Serial.print("SO2: ");  Serial.println(meter.SO2);
+  Serial.print("CH2O: ");  Serial.println(meter.CH2O);
 
 
   Serial.println("");
